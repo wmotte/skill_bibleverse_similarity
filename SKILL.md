@@ -123,7 +123,7 @@ python3 03__query_with_bgt.py Ruth 1 16 --top 10
 
 **Required Files** (all relative to repository root):
 - `misc/verse_similarity_bundle_int8.joblib`: Pre-computed embeddings (int8 quantized)
-- `misc/bgt_with_titles.joblib`: Indexed BGT translation
+- `misc/bgt_with_titles.joblib.gz`: Indexed BGT translation
 - `misc/lxx_to_hebrew_mapping.joblib`: LXX→Hebrew verse mappings
 
 **Script Dependencies**:

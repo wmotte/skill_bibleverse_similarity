@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
+import io
 import json
 import re
 import sys
@@ -351,8 +353,22 @@ def load_bgt_verses(path: Path) -> Dict[str, Dict[int, List[BgtEntry]]]:
     if not path.exists():
         raise SystemExit(f"BGT file not found: {path}")
 
-    if path.suffix.lower() == ".joblib":
-        payload = joblib.load(path)
+    suffixes = [suffix.lower() for suffix in path.suffixes]
+    if suffixes and suffixes[-1] == ".gz":
+        with gzip.open(path, "rb") as handle:
+            raw_bytes = handle.read()
+    else:
+        raw_bytes = path.read_bytes()
+
+    payload: Optional[Dict[str, Any]]
+    try:
+        payload = joblib.load(io.BytesIO(raw_bytes))
+        if not isinstance(payload, dict):
+            payload = None
+    except Exception:
+        payload = None
+
+    if payload is not None:
         index: Dict[str, Dict[int, List[BgtEntry]]] = {}
 
         def coerce_entry(raw_entry: object, normalized_key: str) -> BgtEntry:
@@ -388,35 +404,35 @@ def load_bgt_verses(path: Path) -> Dict[str, Dict[int, List[BgtEntry]]]:
         return index
 
     index: Dict[str, Dict[int, List[BgtEntry]]] = {}
-    with path.open(encoding="utf-8") as handle:
-        reader = csv.DictReader(handle, delimiter="\t")
-        for row in reader:
-            if (row.get("type") or "").strip() != "verse":
-                continue
-            book = (row.get("book") or "").strip()
-            chapter_raw = (row.get("chapter") or "").strip()
-            verse_raw = (row.get("verse") or "").strip()
-            text = (row.get("text") or "").strip()
-            if not (book and chapter_raw and verse_raw and text):
-                continue
-            try:
-                chapter = int(chapter_raw)
-                start, end = parse_verse_range(verse_raw)
-            except ValueError:
-                continue
-            book_key = normalize_book_name(book)
-            entries = index.setdefault(book_key, {}).setdefault(chapter, [])
-            entries.append(
-                BgtEntry(
-                    book_key=book_key,
-                    display_book=book,
-                    chapter=chapter,
-                    raw_verse=verse_raw,
-                    start=start,
-                    end=end,
-                    text=text,
-                )
+    text_buffer = io.StringIO(raw_bytes.decode("utf-8"))
+    reader = csv.DictReader(text_buffer, delimiter="\t")
+    for row in reader:
+        if (row.get("type") or "").strip() != "verse":
+            continue
+        book = (row.get("book") or "").strip()
+        chapter_raw = (row.get("chapter") or "").strip()
+        verse_raw = (row.get("verse") or "").strip()
+        text = (row.get("text") or "").strip()
+        if not (book and chapter_raw and verse_raw and text):
+            continue
+        try:
+            chapter = int(chapter_raw)
+            start, end = parse_verse_range(verse_raw)
+        except ValueError:
+            continue
+        book_key = normalize_book_name(book)
+        entries = index.setdefault(book_key, {}).setdefault(chapter, [])
+        entries.append(
+            BgtEntry(
+                book_key=book_key,
+                display_book=book,
+                chapter=chapter,
+                raw_verse=verse_raw,
+                start=start,
+                end=end,
+                text=text,
             )
+        )
     return index
 
 

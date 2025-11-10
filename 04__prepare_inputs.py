@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
+import gzip
 import joblib
 import re
 
@@ -27,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--bgt-joblib",
         type=Path,
-        default=root / "misc" / "bgt_with_titles.joblib",
+        default=root / "misc" / "bgt_with_titles.joblib.gz",
         help="Destination for the serialized BGT verses.",
     )
     parser.add_argument(
@@ -110,10 +111,19 @@ def build_bgt_index(tsv_path: Path) -> Dict[str, Dict[int, List[Dict[str, object
     return index
 
 
+def dump_joblib(payload: object, joblib_path: Path, compress: int) -> None:
+    joblib_path.parent.mkdir(parents=True, exist_ok=True)
+    suffixes = [suffix.lower() for suffix in joblib_path.suffixes]
+    if suffixes[-2:] == [".joblib", ".gz"]:
+        with gzip.open(joblib_path, "wb") as handle:
+            joblib.dump(payload, handle, compress=compress)
+    else:
+        joblib.dump(payload, joblib_path, compress=compress)
+
+
 def convert_bgt(tsv_path: Path, joblib_path: Path, compress: int) -> None:
     index = build_bgt_index(tsv_path)
-    joblib_path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(index, joblib_path, compress=compress)
+    dump_joblib(index, joblib_path, compress)
     print(f"Wrote {joblib_path} ({len(index)} book buckets).")
 
 
@@ -122,8 +132,7 @@ def convert_lxx(json_path: Path, joblib_path: Path, compress: int) -> None:
         raise SystemExit(f"LXX JSON not found: {json_path}")
     with json_path.open(encoding="utf-8") as handle:
         data = json.load(handle)
-    joblib_path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(data, joblib_path, compress=compress)
+    dump_joblib(data, joblib_path, compress)
     print(f"Wrote {joblib_path} with {len(data)} entries.")
 
 

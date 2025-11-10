@@ -63,7 +63,7 @@ python3 01__query_from_similarity.py John 3 16 --top 10
 python3 03__query_with_bgt.py --reference "John 3:16" --top 10
 # Uses default paths in misc/ directory:
 # - verse_similarity_bundle_int8.joblib
-# - bgt_with_titles.joblib
+# - bgt_with_titles.joblib.gz
 # - lxx_to_hebrew_mapping.joblib
 ```
 
@@ -81,7 +81,7 @@ python3 04__prepare_inputs.py --bgt-tsv raw_inputs/bgt_with_titles.tsv --lxx-jso
 
 ### Generated Artifacts
 - `misc/verse_similarity_bundle_int8.joblib`: Quantized embedding bundle (default for queries)
-- `misc/bgt_with_titles.joblib`: Indexed BGT verses for fast lookup
+- `misc/bgt_with_titles.joblib.gz`: Indexed BGT verses for fast lookup
 - `misc/lxx_to_hebrew_mapping.joblib`: Compiled mapping data
 
 ### Bundle Structure
