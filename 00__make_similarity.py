@@ -17,7 +17,7 @@ import urllib.error
 import urllib.request
 from difflib import get_close_matches
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import joblib
 import numpy as np
@@ -326,6 +326,27 @@ def build_embeddings(
     return generate_semantic_embeddings(texts, embedding_model, endpoint, concurrency, timeout)
 
 
+def restore_svd_int8_matrix(
+    encoded: np.ndarray,
+    payload: Dict[str, Any],
+) -> np.ndarray:
+    projection = payload.get("projection")
+    scales = payload.get("svd_scales")
+    if projection is None or scales is None:
+        raise SystemExit(
+            "Bundle stores matrix_format=svd_int8 but is missing projection/scales. "
+            "Rebuild the embeddings cache."
+        )
+    projection_arr = np.asarray(projection, dtype=np.float32)
+    scales_arr = np.asarray(scales, dtype=np.float32)
+    if encoded.ndim != 2:
+        raise SystemExit("Compressed matrix must be two-dimensional.")
+    if projection_arr.shape[0] != encoded.shape[1] or scales_arr.shape[0] != encoded.shape[1]:
+        raise SystemExit("SVD metadata mismatch detected. Rebuild the embeddings cache.")
+    reduced = encoded.astype(np.float32) * scales_arr
+    return reduced @ projection_arr
+
+
 def load_bundle(bundle_path: Path) -> Tuple[np.ndarray, List[str], List[Dict[str, object]], Dict[str, object]]:
     payload = joblib.load(bundle_path)
     try:
@@ -337,6 +358,9 @@ def load_bundle(bundle_path: Path) -> Tuple[np.ndarray, List[str], List[Dict[str
         raise SystemExit(
             f"Bundle file {bundle_path} is missing required data. Rebuild with --rebuild."
         ) from exc
+    matrix_format = meta.get("matrix_format")
+    if matrix_format == "svd_int8":
+        matrix = restore_svd_int8_matrix(matrix, payload)
     if matrix.shape[0] != len(keys) or len(keys) != len(verses):
         raise SystemExit(f"Bundle file {bundle_path} is inconsistent. Rebuild with --rebuild.")
     if not isinstance(matrix, np.ndarray):

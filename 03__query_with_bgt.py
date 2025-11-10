@@ -134,6 +134,27 @@ def canonicalize_book_name(book: str, alias_map: Dict[str, str]) -> str:
     raise SystemExit(f"Unknown book name '{book}'. Please provide a valid name or abbreviation.")
 
 
+def restore_svd_int8_matrix(
+    encoded: np.ndarray,
+    payload: Dict[str, Any],
+) -> np.ndarray:
+    projection = payload.get("projection")
+    scales = payload.get("svd_scales")
+    if projection is None or scales is None:
+        raise SystemExit(
+            "Bundle stores matrix_format=svd_int8 but lacks 'projection' or 'svd_scales'. "
+            "Regenerate it with 02__compress_bundle.py."
+        )
+    projection_arr = np.asarray(projection, dtype=np.float32)
+    scales_arr = np.asarray(scales, dtype=np.float32)
+    if encoded.ndim != 2:
+        raise SystemExit("Compressed matrix must be 2-dimensional.")
+    if projection_arr.shape[0] != encoded.shape[1] or scales_arr.shape[0] != encoded.shape[1]:
+        raise SystemExit("SVD metadata mismatch detected. Rebuild the bundle.")
+    reduced = encoded.astype(np.float32) * scales_arr
+    return reduced @ projection_arr
+
+
 def load_bundle(bundle_path: Path) -> Tuple[np.ndarray, List[str], List[Dict[str, object]]]:
     if not bundle_path.exists():
         raise SystemExit(f"Bundle file not found: {bundle_path}")
@@ -155,6 +176,9 @@ def load_bundle(bundle_path: Path) -> Tuple[np.ndarray, List[str], List[Dict[str
         )
 
     meta = payload.get("meta") or {}
+    matrix_format = meta.get("matrix_format")
+    if matrix_format == "svd_int8":
+        matrix = restore_svd_int8_matrix(matrix, payload)
     quant_meta = meta.get("quantization") if isinstance(meta, dict) else None
     if matrix.dtype == np.float32:
         pass
