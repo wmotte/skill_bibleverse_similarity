@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--bgt-joblib",
         type=Path,
-        default=root / "misc" / "bgt_with_titles.joblib.gz",
+        default=root / "misc" / "bgt_with_titles.joblib",
         help="Destination for the serialized BGT verses.",
     )
     parser.add_argument(

@@ -1,6 +1,6 @@
 # Bible Verse Similarity Skill
 
-A Claude (Desktop) Skill for finding semantically similar Bible verses using pre-computed embeddings.
+A Claude Skill for finding semantically similar Bible verses using pre-computed embeddings.
 
 ## Installation
 
@@ -45,7 +45,7 @@ Claude will automatically invoke this skill and present the results in a readabl
 ### Data Files
 The skill requires pre-built data files in the `misc/` directory:
 - `verse_similarity_bundle_int8.joblib` (semantic embeddings)
-- `bgt_with_titles.joblib.gz` (Dutch BGT translation)
+- `bgt_with_titles.joblib` (Dutch BGT translation)
 - `lxx_to_hebrew_mapping.joblib` (LXX↔Hebrew mappings)
 
 ### Python Dependencies
