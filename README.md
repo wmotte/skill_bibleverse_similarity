@@ -1,6 +1,6 @@
 # Bible Verse Similarity Skill
 
-A Claude Desktop Skill for finding semantically similar Bible verses using pre-computed embeddings.
+A Claude (Desktop) Skill for finding semantically similar Bible verses using pre-computed embeddings.
 
 ## Installation
 
